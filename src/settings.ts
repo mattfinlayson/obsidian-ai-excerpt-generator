@@ -15,6 +15,8 @@ export const DEFAULT_SETTINGS: AIExcerptSettings = {
 	claudeModel: "claude-3-7-sonnet-20250219",
 	openaiApiKey: "",
 	openaiModel: "gpt-4o",
+	ollamaEndpoint: "http://localhost:11434",
+	ollamaModel: "",
 	maxLength: 140,
 };
 
