@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS: AIExcerptSettings = {
 	openaiModel: "gpt-4o",
 	ollamaEndpoint: "http://localhost:11434",
 	ollamaModel: "",
+	ollamaApiKey: "",
 	maxLength: 140,
 };
 

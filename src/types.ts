@@ -54,6 +54,7 @@ export interface AIExcerptSettings {
 	openaiModel: string;
 	ollamaEndpoint: string;
 	ollamaModel: string;
+	ollamaApiKey: string;
 	maxLength: number;
 }
 
