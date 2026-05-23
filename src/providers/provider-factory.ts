@@ -213,7 +213,8 @@ export class ProviderFactory {
 				const ollamaProvider = new OllamaProvider(
 					settings.ollamaEndpoint,
 					settings.ollamaModel,
-					settings.promptType
+					settings.promptType,
+					settings.ollamaApiKey
 				);
 
 				// Store the provider for reuse

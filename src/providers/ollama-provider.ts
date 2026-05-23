@@ -5,15 +5,18 @@ export class OllamaProvider implements AIExcerptProvider {
 	private endpoint: string;
 	private model: string;
 	private promptType: PromptType;
+	private apiKey: string;
 
 	constructor(
 		endpoint: string,
 		model: string,
-		promptType = PromptType.DEFAULT
+		promptType = PromptType.DEFAULT,
+		apiKey = ""
 	) {
 		this.endpoint = endpoint;
 		this.model = model;
 		this.promptType = promptType;
+		this.apiKey = apiKey;
 	}
 
 	async generateExcerpt(content: string, maxLength: number): Promise<string> {
@@ -35,11 +38,19 @@ IMPORTANT RULES:
 - If approaching the character limit, find a natural ending point for a complete thought
 - Count your characters carefully to ensure you don't exceed the limit`;
 
+			const headers: Record<string, string> = {
+				"Content-Type": "application/json",
+			};
+			const trimmedKey = this.apiKey.trim();
+			if (trimmedKey) {
+				headers["Authorization"] = `Bearer ${trimmedKey}`;
+			}
+
 			const response = await fetch(
 				`${this.endpoint}/api/generate`,
 				{
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
+					headers,
 					signal: controller.signal,
 					body: JSON.stringify({
 						model: this.model,
@@ -59,6 +70,16 @@ IMPORTANT RULES:
 			const data = await response.json();
 
 			if (!response.ok || data.error) {
+				if (response.status === 401) {
+					throw new Error(
+						"Invalid Ollama API key. Check your API key in the plugin settings."
+					);
+				}
+				if (response.status === 403) {
+					throw new Error(
+						"Ollama access denied. Your plan may not support this model or you may have hit usage limits."
+					);
+				}
 				if (
 					response.status === 404 &&
 					data.error?.includes("not found")
