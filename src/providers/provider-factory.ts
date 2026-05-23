@@ -1,6 +1,7 @@
 import { AIExcerptProvider, AIExcerptSettings, LLMProvider } from "../types";
 import { ClaudeProvider } from "./claude-provider";
 import { OpenAIProvider } from "./openai-provider";
+import { OllamaProvider } from "./ollama-provider";
 
 /**
  * Factory for creating AI providers based on plugin settings
@@ -205,6 +206,24 @@ export class ProviderFactory {
 				});
 				return openaiProvider;
 
+			case LLMProvider.OLLAMA:
+				console.log(
+					`Creating Ollama provider with endpoint: ${settings.ollamaEndpoint}, model: ${settings.ollamaModel}, prompt type: ${settings.promptType}`
+				);
+				const ollamaProvider = new OllamaProvider(
+					settings.ollamaEndpoint,
+					settings.ollamaModel,
+					settings.promptType
+				);
+
+				// Store the provider for reuse
+				this.activeProviders.set(providerId, {
+					provider: ollamaProvider,
+					lastUsed: Date.now(),
+					id: providerId,
+				});
+				return ollamaProvider;
+
 			default:
 				console.error(`Unknown provider: ${settings.provider}`);
 				return null;
@@ -251,7 +270,9 @@ export class ProviderFactory {
 				(providerType === LLMProvider.CLAUDE &&
 					provider instanceof ClaudeProvider) ||
 				(providerType === LLMProvider.OPENAI &&
-					provider instanceof OpenAIProvider)
+					provider instanceof OpenAIProvider) ||
+				(providerType === LLMProvider.OLLAMA &&
+					provider instanceof OllamaProvider)
 			) {
 				// Update last used timestamp
 				providerData.lastUsed = Date.now();
@@ -285,6 +306,14 @@ export class ProviderFactory {
 			fallbackType: null as LLMProvider | null,
 			needsConfiguration: false,
 		};
+
+		// Ollama never falls back to cloud providers
+		if (primaryProvider === LLMProvider.OLLAMA) {
+			console.log(
+				"Ollama provider failed — no cloud fallback per privacy policy."
+			);
+			return result;
+		}
 
 		// If primary is Claude, try OpenAI as fallback
 		if (primaryProvider === LLMProvider.CLAUDE) {

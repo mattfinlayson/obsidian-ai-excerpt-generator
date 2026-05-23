@@ -48,6 +48,19 @@ export class FileProcessor {
 		this.plugin = plugin || null;
 	}
 
+	private _getProviderName(provider: LLMProvider): string {
+		switch (provider) {
+			case LLMProvider.CLAUDE:
+				return "Claude";
+			case LLMProvider.OPENAI:
+				return "OpenAI";
+			case LLMProvider.OLLAMA:
+				return "Ollama";
+			default:
+				return provider;
+		}
+	}
+
 	/**
 	 * Process a single file to add or update its excerpt in the frontmatter
 	 *
@@ -117,6 +130,12 @@ export class FileProcessor {
 						this.settings.provider
 					);
 
+					// Ollama never falls back to cloud providers — surface the error directly
+					if (this.settings.provider === LLMProvider.OLLAMA) {
+						ProviderFactory.releaseProvider(provider);
+						throw providerError;
+					}
+
 					// Try fallback provider if primary fails
 					const fallbackResult =
 						ProviderFactory.createFallbackProvider(
@@ -131,13 +150,11 @@ export class FileProcessor {
 								: "Claude";
 
 						if (showNotices) {
+							const primaryName = this._getProviderName(
+								this.settings.provider
+							);
 							new Notice(
-								`${
-									this.settings.provider ===
-									LLMProvider.CLAUDE
-										? "Claude"
-										: "OpenAI"
-								} API failed. Trying ${fallbackName} as fallback...`
+								`${primaryName} API failed. Trying ${fallbackName} as fallback...`
 							);
 						}
 
@@ -183,10 +200,9 @@ export class FileProcessor {
 							throw fallbackError;
 						}
 					} else if (fallbackResult.needsConfiguration) {
-						const primaryName =
-							this.settings.provider === LLMProvider.CLAUDE
-								? "Claude"
-								: "OpenAI";
+						const primaryName = this._getProviderName(
+							this.settings.provider
+						);
 						const missingProvider =
 							fallbackResult.fallbackType === LLMProvider.OPENAI
 								? "OpenAI"
@@ -256,6 +272,12 @@ export class FileProcessor {
 				// Report provider failure
 				ProviderFactory.reportProviderFailure(this.settings.provider);
 
+				// Ollama never falls back to cloud providers — surface the error directly
+				if (this.settings.provider === LLMProvider.OLLAMA) {
+					ProviderFactory.releaseProvider(provider);
+					throw providerError;
+				}
+
 				// Try fallback provider if primary fails
 				const fallbackResult = ProviderFactory.createFallbackProvider(
 					this.settings,
@@ -269,12 +291,11 @@ export class FileProcessor {
 							: "Claude";
 
 					if (showNotices) {
+						const primaryName = this._getProviderName(
+							this.settings.provider
+						);
 						new Notice(
-							`${
-								this.settings.provider === LLMProvider.CLAUDE
-									? "Claude"
-									: "OpenAI"
-							} API failed. Trying ${fallbackName} as fallback...`
+							`${primaryName} API failed. Trying ${fallbackName} as fallback...`
 						);
 					}
 
@@ -324,15 +345,14 @@ export class FileProcessor {
 
 						throw fallbackError;
 					}
-				} else if (fallbackResult.needsConfiguration) {
-					const primaryName =
-						this.settings.provider === LLMProvider.CLAUDE
-							? "Claude"
-							: "OpenAI";
-					const missingProvider =
-						fallbackResult.fallbackType === LLMProvider.OPENAI
-							? "OpenAI"
-							: "Claude";
+			} else if (fallbackResult.needsConfiguration) {
+						const primaryName = this._getProviderName(
+							this.settings.provider
+						);
+						const missingProvider =
+							fallbackResult.fallbackType === LLMProvider.OPENAI
+								? "OpenAI"
+								: "Claude";
 
 					if (showNotices) {
 						new Notice(
