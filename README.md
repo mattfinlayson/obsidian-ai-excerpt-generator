@@ -90,16 +90,26 @@ We offer six different prompt styles that produce unique results:
 
 [More details in OpenAI's documentation](https://platform.openai.com/docs/quickstart)
 
-### Ollama (Local)
+### Ollama
 
-Ollama runs AI models locally on your machine — no API key required, and no content is sent to any cloud service. You must install and manage Ollama separately.
+Ollama runs AI models locally on your machine or via Ollama.com's cloud service. You must install and manage Ollama separately.
+
+**Local use:**
 
 1. Install Ollama from [ollama.com](https://ollama.com)
 2. Start the Ollama service (the desktop app does this automatically, or run `ollama serve` from the terminal)
 3. Pull a model: `ollama pull llama3.2`
-4. In the plugin settings, select **Ollama (Local)** as your AI provider
+4. In the plugin settings, select **Ollama** as your AI provider
 5. The default endpoint (`http://localhost:11434`) works for a standard local installation — change it if you use Docker, a different port, or access Ollama on another machine
 6. Enter your model name in the **Model** field (e.g. `llama3.2`, `mistral:latest`)
+7. Leave the API key field empty — it is only needed for cloud use
+
+**Cloud use:**
+
+1. Select **Ollama** as your AI provider
+2. Set the **Endpoint** to `https://ollama.com/api`
+3. Enter your **Ollama API Key** — get one at [ollama.com/settings/api-keys](https://ollama.com/settings/api-keys)
+4. Enter the cloud model name in the **Model** field
 
 **Recommended models for excerpt generation:**
 
@@ -107,7 +117,7 @@ Ollama runs AI models locally on your machine — no API key required, and no co
 -   `llama3.2:1b` — tiny, fastest option
 -   `mistral:latest` — good all-rounder
 
-**Privacy:** Ollama is a local provider. When Ollama is selected, generation failures do not fall back to Claude, OpenAI, or any other cloud service — your note content stays on your machine.
+**Privacy:** When Ollama is selected, generation failures do not fall back to Claude, OpenAI, or any other cloud service — your note content stays on your configured Ollama instance (local or cloud).
 
 [More details in Ollama's documentation](https://github.com/ollama/ollama/blob/main/docs/api.md)
 
