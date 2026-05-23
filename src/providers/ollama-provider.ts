@@ -1,3 +1,4 @@
+import { requestUrl } from "obsidian";
 import { AIExcerptProvider, PromptType } from "../types";
 import { Prompts } from "../utils/prompts";
 
@@ -20,13 +21,13 @@ export class OllamaProvider implements AIExcerptProvider {
 	}
 
 	async generateExcerpt(content: string, maxLength: number): Promise<string> {
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), 60000);
+		const timeoutMs = parseInt(
+			localStorage.getItem("ai-excerpt-ollama-timeout") || "300000",
+			10
+		);
 
-		try {
-			const systemPrompt = this._getPromptForType();
-
-			const enhancedSystemPrompt = `${systemPrompt}
+		const systemPrompt = this._getPromptForType();
+		const enhancedSystemPrompt = `${systemPrompt}
 
 Generate a concise excerpt (maximum ${maxLength} characters) that captures the essence of this document.
 
@@ -38,80 +39,122 @@ IMPORTANT RULES:
 - If approaching the character limit, find a natural ending point for a complete thought
 - Count your characters carefully to ensure you don't exceed the limit`;
 
-			const headers: Record<string, string> = {
-				"Content-Type": "application/json",
-			};
-			const trimmedKey = this.apiKey.trim();
-			if (trimmedKey) {
-				headers["Authorization"] = `Bearer ${trimmedKey}`;
-			}
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+		};
+		const trimmedKey = this.apiKey.trim();
+		if (trimmedKey) {
+			headers["Authorization"] = `Bearer ${trimmedKey}`;
+		}
 
-			const response = await fetch(
-				`${this.endpoint}/api/generate`,
-				{
+		const isCloud = this.endpoint.includes("ollama.com");
+		const apiPath = isCloud ? "/api/chat" : "/api/generate";
+
+		const requestBody = isCloud
+			? JSON.stringify({
+				model: this.model,
+				messages: [
+					{ role: "system", content: enhancedSystemPrompt },
+					{ role: "user", content },
+				],
+				stream: false,
+				options: {
+					temperature: 0.3,
+					num_predict: 150,
+				},
+			  })
+			: JSON.stringify({
+				model: this.model,
+				prompt: `Document:\n${content}`,
+				system: enhancedSystemPrompt,
+				stream: false,
+				options: {
+					temperature: 0.3,
+					num_predict: 150,
+				},
+			  });
+
+		let timer: ReturnType<typeof setTimeout> | null = null;
+		const timeoutPromise = new Promise<never>((_, reject) => {
+			timer = setTimeout(() => {
+				reject(new Error("TIMEOUT"));
+			}, timeoutMs);
+		});
+
+		try {
+			const response = await Promise.race([
+				requestUrl({
+					url: `${this.endpoint}${apiPath}`,
 					method: "POST",
 					headers,
-					signal: controller.signal,
-					body: JSON.stringify({
-						model: this.model,
-						prompt: `Document:\n${content}`,
-						system: enhancedSystemPrompt,
-						stream: false,
-						options: {
-							temperature: 0.3,
-							num_predict: 150,
-						},
-					}),
-				}
-			);
+					body: requestBody,
+					throw: false,
+				}),
+				timeoutPromise,
+			]);
 
-			clearTimeout(timeoutId);
+			if (timer) clearTimeout(timer);
 
-			const data = await response.json();
-
-			if (!response.ok || data.error) {
-				if (response.status === 401) {
-					throw new Error(
-						"Invalid Ollama API key. Check your API key in the plugin settings."
-					);
-				}
-				if (response.status === 403) {
-					throw new Error(
-						"Ollama access denied. Your plan may not support this model or you may have hit usage limits."
-					);
-				}
-				if (
-					response.status === 404 &&
-					data.error?.includes("not found")
-				) {
+			// Handle HTTP errors
+			if (response.status === 401) {
+				throw new Error(
+					"Invalid Ollama API key. Check your API key in the plugin settings."
+				);
+			}
+			if (response.status === 403) {
+				throw new Error(
+					"Ollama access denied. Your plan may not support this model or you may have hit usage limits."
+				);
+			}
+			if (response.status === 404) {
+				const data = response.json;
+				if (data.error?.includes("not found")) {
 					throw new Error(
 						`Model '${this.model}' not found. Run 'ollama pull ${this.model}' to download it.`
 					);
 				}
-				if (response.status === 503) {
-					throw new Error(
-						"Ollama server is busy. Please try again shortly."
-					);
-				}
+				throw new Error(
+					`Ollama error (404): ${data.error || "Unknown error"}`
+				);
+			}
+			if (response.status === 502) {
+				const data = response.json;
+				throw new Error(
+					"Ollama Cloud is unreachable. If using a cloud model (e.g. gemma:4b-cloud), run 'ollama signin' or check your network connectivity. [502: " +
+						(data.error || "TLS timeout") +
+						"]"
+				);
+			}
+			if (response.status === 503) {
+				throw new Error(
+					"Ollama server is busy. Please try again shortly."
+				);
+			}
+			if (response.status >= 400) {
+				const data = response.json;
 				throw new Error(
 					`Ollama error (${response.status}): ${data.error || "Unknown error"}`
 				);
 			}
 
-			const excerptText = (data.response || "").trim();
-			return this._ensureCompleteSentence(excerptText, maxLength);
-		} catch (error) {
-			clearTimeout(timeoutId);
+			const data = response.json;
+			const excerptText = isCloud
+				? (data.message?.content || "").trim()
+				: (data.response || "").trim();
 
-			if (error instanceof Error && error.name === "AbortError") {
+			if (!excerptText) {
 				throw new Error(
-					"Ollama request timed out. The model may be too slow or too large for your hardware."
+					"Ollama returned an empty response. The model may not support this prompt format. Try a different model or check the endpoint."
 				);
 			}
 
-			if (error instanceof TypeError) {
+			return this._ensureCompleteSentence(excerptText, maxLength);
+		} catch (error) {
+			if (timer) clearTimeout(timer);
+
+			if (error instanceof Error && error.message === "TIMEOUT") {
 				throw new Error(
-					`Cannot connect to Ollama. Make sure Ollama is running at ${this.endpoint}.`
+					"Ollama request timed out. The model may be too slow or too large for your hardware."
 				);
 			}
 

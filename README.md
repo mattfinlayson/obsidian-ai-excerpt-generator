@@ -107,9 +107,9 @@ Ollama runs AI models locally on your machine or via Ollama.com's cloud service.
 **Cloud use:**
 
 1. Select **Ollama** as your AI provider
-2. Set the **Endpoint** to `https://ollama.com/api`
-3. Enter your **Ollama API Key** — get one at [ollama.com/settings/api-keys](https://ollama.com/settings/api-keys)
-4. Enter the cloud model name in the **Model** field
+2. Set the **Endpoint** to `https://ollama.com`
+3. Enter your **Ollama API Key** — get one at [ollama.com/settings/keys](https://ollama.com/settings/keys)
+4. Enter the cloud model name in the **Model** field (without the `-cloud` suffix — for example, use `gemma3:4b` instead of `gemma3:4b-cloud`)
 
 **Recommended models for excerpt generation:**
 

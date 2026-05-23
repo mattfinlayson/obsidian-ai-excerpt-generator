@@ -136,6 +136,11 @@ export class ProviderFactory {
 			if (fallbackResult.provider) {
 				return fallbackResult.provider;
 			}
+			// No fallback available; short-circuit to avoid re-creating a failing provider
+			console.warn(
+				`No fallback available for ${settings.provider}. Skipping generation.`
+			);
+			return null;
 		}
 
 		// Check if we already have too many active providers
@@ -265,6 +270,10 @@ export class ProviderFactory {
 	private static getExistingProvider(
 		providerType: LLMProvider
 	): AIExcerptProvider | null {
+		if (this.isProviderInCooldown(providerType)) {
+			return null;
+		}
+
 		for (const [id, providerData] of this.activeProviders.entries()) {
 			const provider = providerData.provider;
 			if (
@@ -408,6 +417,24 @@ export class ProviderFactory {
 	static reportProviderFailure(provider: LLMProvider): void {
 		// Put the provider in cooldown after failure
 		this.setProviderCooldown(provider);
+
+		// Remove all active instances of this provider type so they aren't reused
+		for (const [id, providerData] of this.activeProviders.entries()) {
+			const instance = providerData.provider;
+			if (
+				(provider === LLMProvider.CLAUDE &&
+					instance instanceof ClaudeProvider) ||
+				(provider === LLMProvider.OPENAI &&
+					instance instanceof OpenAIProvider) ||
+				(provider === LLMProvider.OLLAMA &&
+					instance instanceof OllamaProvider)
+			) {
+				this.activeProviders.delete(id);
+				console.log(
+					`Removed active ${provider} instance ${id} after failure`
+				);
+			}
+		}
 	}
 
 	/**

@@ -132,7 +132,6 @@ export class FileProcessor {
 
 					// Ollama never falls back to cloud providers — surface the error directly
 					if (this.settings.provider === LLMProvider.OLLAMA) {
-						ProviderFactory.releaseProvider(provider);
 						throw providerError;
 					}
 
@@ -192,11 +191,6 @@ export class FileProcessor {
 								);
 							}
 
-							// Release the fallback provider
-							ProviderFactory.releaseProvider(
-								fallbackResult.provider
-							);
-
 							throw fallbackError;
 						}
 					} else if (fallbackResult.needsConfiguration) {
@@ -215,15 +209,9 @@ export class FileProcessor {
 							);
 						}
 
-						// Release the provider
-						ProviderFactory.releaseProvider(provider);
-
 						// Re-throw the original error
 						throw providerError;
 					} else {
-						// Release the provider
-						ProviderFactory.releaseProvider(provider);
-
 						// No fallback available, re-throw the original error
 						throw providerError;
 					}
@@ -274,7 +262,6 @@ export class FileProcessor {
 
 				// Ollama never falls back to cloud providers — surface the error directly
 				if (this.settings.provider === LLMProvider.OLLAMA) {
-					ProviderFactory.releaseProvider(provider);
 					throw providerError;
 				}
 
@@ -338,11 +325,6 @@ export class FileProcessor {
 							);
 						}
 
-						// Release the fallback provider
-						ProviderFactory.releaseProvider(
-							fallbackResult.provider
-						);
-
 						throw fallbackError;
 					}
 			} else if (fallbackResult.needsConfiguration) {
@@ -361,15 +343,9 @@ export class FileProcessor {
 						);
 					}
 
-					// Release the provider
-					ProviderFactory.releaseProvider(provider);
-
 					// Re-throw the original error
 					throw providerError;
 				} else {
-					// Release the provider
-					ProviderFactory.releaseProvider(provider);
-
 					// No fallback available, re-throw the original error
 					throw providerError;
 				}

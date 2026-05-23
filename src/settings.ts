@@ -169,7 +169,7 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName("Ollama API Key")
 				.setDesc(
-					"Optional. Only needed when using Ollama.com cloud (https://ollama.com/api). Leave empty for local use."
+					"Optional. Only needed when using Ollama.com cloud (https://ollama.com). Leave empty for local use."
 				)
 				.addText((text) =>
 					text
@@ -184,7 +184,7 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName("Ollama Endpoint")
 				.setDesc(
-					"Base URL for the Ollama service. Defaults to a standard local installation. Change this for Docker, LAN, or non-default port setups."
+					"Base URL for the Ollama service. Defaults to local (http://localhost:11434). Use https://ollama.com for direct cloud API access with an API key, or a custom host for Docker/LAN setups."
 				)
 				.addText((text) =>
 					text
@@ -199,7 +199,7 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName("Ollama Model")
 				.setDesc(
-					"Enter the model name to use (e.g. 'llama3.2', 'mistral:latest'). You must install the model separately via 'ollama pull <model>' before using it here."
+					"Enter the model name (e.g. 'llama3.2', 'mistral:latest'). For Ollama.com cloud API, omit the -cloud suffix (use 'gemma3:4b' not 'gemma3:4b-cloud'). For local use, install via 'ollama pull <model>' first."
 				)
 				.addText((text) =>
 					text
