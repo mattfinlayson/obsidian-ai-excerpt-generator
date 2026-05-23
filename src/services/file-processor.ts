@@ -54,8 +54,10 @@ export class FileProcessor {
 				return "Claude";
 			case LLMProvider.OPENAI:
 				return "OpenAI";
-			case LLMProvider.OLLAMA:
-				return "Ollama";
+			case LLMProvider.OLLAMA_LOCAL:
+				return "Ollama (Local)";
+			case LLMProvider.OLLAMA_CLOUD:
+				return "Ollama (Cloud)";
 			default:
 				return provider;
 		}
@@ -131,7 +133,7 @@ export class FileProcessor {
 					);
 
 					// Ollama never falls back to cloud providers — surface the error directly
-					if (this.settings.provider === LLMProvider.OLLAMA) {
+					if (this.settings.provider === LLMProvider.OLLAMA_LOCAL || this.settings.provider === LLMProvider.OLLAMA_CLOUD) {
 						throw providerError;
 					}
 
@@ -261,7 +263,7 @@ export class FileProcessor {
 				ProviderFactory.reportProviderFailure(this.settings.provider);
 
 				// Ollama never falls back to cloud providers — surface the error directly
-				if (this.settings.provider === LLMProvider.OLLAMA) {
+				if (this.settings.provider === LLMProvider.OLLAMA_LOCAL || this.settings.provider === LLMProvider.OLLAMA_CLOUD) {
 					throw providerError;
 				}
 

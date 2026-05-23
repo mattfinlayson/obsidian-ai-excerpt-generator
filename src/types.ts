@@ -4,7 +4,8 @@ import { TFile, TFolder } from "obsidian";
 export enum LLMProvider {
 	CLAUDE = "claude",
 	OPENAI = "openai",
-	OLLAMA = "ollama",
+	OLLAMA_LOCAL = "ollama_local",
+	OLLAMA_CLOUD = "ollama_cloud",
 }
 
 // Define available prompt types
@@ -52,9 +53,10 @@ export interface AIExcerptSettings {
 	claudeModel: string;
 	openaiApiKey: string;
 	openaiModel: string;
-	ollamaEndpoint: string;
-	ollamaModel: string;
-	ollamaApiKey: string;
+	ollamaLocalEndpoint: string;
+	ollamaLocalModel: string;
+	ollamaCloudApiKey: string;
+	ollamaCloudModel: string;
 	maxLength: number;
 }
 

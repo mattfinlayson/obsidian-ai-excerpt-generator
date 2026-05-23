@@ -1,5 +1,5 @@
 import { App, Menu, Notice, Plugin, TFile, TFolder } from "obsidian";
-import { AIExcerptPlugin, AIExcerptSettings } from "./types";
+import { AIExcerptPlugin, AIExcerptSettings, LLMProvider } from "./types";
 import { DEFAULT_SETTINGS, AIExcerptSettingTab } from "./settings";
 import { GenerateAllModal } from "./modals/generate-all-modal";
 import { SelectDirectoryModal } from "./modals/select-directory-modal";
@@ -221,11 +221,34 @@ export default class AIExcerptGenerator
 	 * Load plugin settings from storage
 	 */
 	async loadSettings() {
+		const loadedData: Record<string, unknown> = await this.loadData() || {};
+		const needsMigration = loadedData["provider"] === "ollama";
+
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			await this.loadData()
+			loadedData as Partial<AIExcerptSettings>
 		);
+
+		if (needsMigration) {
+			const oldEndpoint = (loadedData["ollamaEndpoint"] as string) || "http://localhost:11434";
+			const oldApiKey = (loadedData["ollamaApiKey"] as string) || "";
+			const oldModel = (loadedData["ollamaModel"] as string) || "";
+
+			const isCloud = oldEndpoint.includes("ollama.com");
+
+			if (isCloud) {
+				this.settings.provider = LLMProvider.OLLAMA_CLOUD;
+				this.settings.ollamaCloudApiKey = oldApiKey;
+				this.settings.ollamaCloudModel = oldModel;
+			} else {
+				this.settings.provider = LLMProvider.OLLAMA_LOCAL;
+				this.settings.ollamaLocalEndpoint = oldEndpoint;
+				this.settings.ollamaLocalModel = oldModel;
+			}
+
+			await this.saveSettings();
+		}
 	}
 
 	/**

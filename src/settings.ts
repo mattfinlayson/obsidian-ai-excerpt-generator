@@ -15,9 +15,10 @@ export const DEFAULT_SETTINGS: AIExcerptSettings = {
 	claudeModel: "claude-3-7-sonnet-20250219",
 	openaiApiKey: "",
 	openaiModel: "gpt-4o",
-	ollamaEndpoint: "http://localhost:11434",
-	ollamaModel: "",
-	ollamaApiKey: "",
+	ollamaLocalEndpoint: "http://localhost:11434",
+	ollamaLocalModel: "",
+	ollamaCloudApiKey: "",
+	ollamaCloudModel: "",
 	maxLength: 140,
 };
 
@@ -88,7 +89,8 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 				dropdown
 					.addOption(LLMProvider.CLAUDE, "Claude (Anthropic)")
 					.addOption(LLMProvider.OPENAI, "OpenAI")
-					.addOption(LLMProvider.OLLAMA, "Ollama")
+					.addOption(LLMProvider.OLLAMA_LOCAL, "Ollama (Local)")
+					.addOption(LLMProvider.OLLAMA_CLOUD, "Ollama (Cloud)")
 					.setValue(this.plugin.settings.provider)
 					.onChange(async (value: string) => {
 						this.plugin.settings.provider = value as LLMProvider;
@@ -165,48 +167,65 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 		}
 
 		// Ollama Settings - Only show if Ollama is selected
-		if (this.plugin.settings.provider === LLMProvider.OLLAMA) {
+		if (this.plugin.settings.provider === LLMProvider.OLLAMA_LOCAL) {
 			new Setting(containerEl)
-				.setName("Ollama API Key")
+				.setName("Ollama Local Endpoint")
 				.setDesc(
-					"Optional. Only needed when using Ollama.com cloud (https://ollama.com). Leave empty for local use."
-				)
-				.addText((text) =>
-					text
-						.setPlaceholder("Only needed for Ollama.com cloud")
-						.setValue(this.plugin.settings.ollamaApiKey)
-						.onChange(async (value) => {
-							this.plugin.settings.ollamaApiKey = value;
-							await this.plugin.saveSettings();
-						})
-				);
-
-			new Setting(containerEl)
-				.setName("Ollama Endpoint")
-				.setDesc(
-					"Base URL for the Ollama service. Defaults to local (http://localhost:11434). Use https://ollama.com for direct cloud API access with an API key, or a custom host for Docker/LAN setups."
+					"Base URL for the local Ollama service. Defaults to http://localhost:11434. Change this for Docker/LAN setups."
 				)
 				.addText((text) =>
 					text
 						.setPlaceholder("http://localhost:11434")
-						.setValue(this.plugin.settings.ollamaEndpoint)
+						.setValue(this.plugin.settings.ollamaLocalEndpoint)
 						.onChange(async (value) => {
-							this.plugin.settings.ollamaEndpoint = value;
+							this.plugin.settings.ollamaLocalEndpoint = value;
 							await this.plugin.saveSettings();
 						})
 				);
 
 			new Setting(containerEl)
-				.setName("Ollama Model")
+				.setName("Ollama Local Model")
 				.setDesc(
-					"Enter the model name (e.g. 'llama3.2', 'mistral:latest'). For Ollama.com cloud API, omit the -cloud suffix (use 'gemma3:4b' not 'gemma3:4b-cloud'). For local use, install via 'ollama pull <model>' first."
+					"Enter the model name (e.g. 'llama3.2', 'mistral:latest'). Install via 'ollama pull <model>' first."
 				)
 				.addText((text) =>
 					text
 						.setPlaceholder("e.g. llama3.2")
-						.setValue(this.plugin.settings.ollamaModel)
+						.setValue(this.plugin.settings.ollamaLocalModel)
 						.onChange(async (value) => {
-							this.plugin.settings.ollamaModel = value;
+							this.plugin.settings.ollamaLocalModel = value;
+							await this.plugin.saveSettings();
+						})
+				);
+		}
+
+		if (this.plugin.settings.provider === LLMProvider.OLLAMA_CLOUD) {
+			new Setting(containerEl)
+				.setName("Ollama Cloud API Key")
+				.setDesc(
+					"Your API key for Ollama Cloud (https://ollama.com). Required for cloud access."
+				)
+				.addText((text) =>
+					text
+						.setPlaceholder("Enter your API key")
+						.setValue(this.plugin.settings.ollamaCloudApiKey)
+						.onChange(async (value) => {
+							this.plugin.settings.ollamaCloudApiKey = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(containerEl)
+				.setName("Ollama Cloud Model")
+				.setDesc(
+					"Enter the model name (e.g. 'gemma3:4b'). Omit the -cloud suffix (use 'gemma3:4b' not 'gemma3:4b-cloud')."
+				)
+				.addText((text) =>
+					text
+						.setPlaceholder("e.g. gemma3:4b")
+						.setValue(this.plugin.settings.ollamaCloudModel)
+						.onChange(async (value) => {
+							this.plugin.settings.ollamaCloudModel = value;
 							await this.plugin.saveSettings();
 						})
 				);

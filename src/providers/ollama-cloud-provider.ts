@@ -2,19 +2,18 @@ import { requestUrl } from "obsidian";
 import { AIExcerptProvider, PromptType } from "../types";
 import { Prompts } from "../utils/prompts";
 
-export class OllamaProvider implements AIExcerptProvider {
-	private endpoint: string;
+const OLLAMA_CLOUD_ENDPOINT = "https://ollama.com";
+
+export class OllamaCloudProvider implements AIExcerptProvider {
 	private model: string;
 	private promptType: PromptType;
 	private apiKey: string;
 
 	constructor(
-		endpoint: string,
 		model: string,
 		promptType = PromptType.DEFAULT,
 		apiKey = ""
 	) {
-		this.endpoint = endpoint;
 		this.model = model;
 		this.promptType = promptType;
 		this.apiKey = apiKey;
@@ -47,32 +46,18 @@ IMPORTANT RULES:
 			headers["Authorization"] = `Bearer ${trimmedKey}`;
 		}
 
-		const isCloud = this.endpoint.includes("ollama.com");
-		const apiPath = isCloud ? "/api/chat" : "/api/generate";
-
-		const requestBody = isCloud
-			? JSON.stringify({
-				model: this.model,
-				messages: [
-					{ role: "system", content: enhancedSystemPrompt },
-					{ role: "user", content },
-				],
-				stream: false,
-				options: {
-					temperature: 0.3,
-					num_predict: 150,
-				},
-			  })
-			: JSON.stringify({
-				model: this.model,
-				prompt: `Document:\n${content}`,
-				system: enhancedSystemPrompt,
-				stream: false,
-				options: {
-					temperature: 0.3,
-					num_predict: 150,
-				},
-			  });
+		const requestBody = JSON.stringify({
+			model: this.model,
+			messages: [
+				{ role: "system", content: enhancedSystemPrompt },
+				{ role: "user", content },
+			],
+			stream: false,
+			options: {
+				temperature: 0.3,
+				num_predict: 150,
+			},
+		});
 
 		let timer: ReturnType<typeof setTimeout> | null = null;
 		const timeoutPromise = new Promise<never>((_, reject) => {
@@ -84,7 +69,7 @@ IMPORTANT RULES:
 		try {
 			const response = await Promise.race([
 				requestUrl({
-					url: `${this.endpoint}${apiPath}`,
+					url: `${OLLAMA_CLOUD_ENDPOINT}/api/chat`,
 					method: "POST",
 					headers,
 					body: requestBody,
@@ -95,7 +80,6 @@ IMPORTANT RULES:
 
 			if (timer) clearTimeout(timer);
 
-			// Handle HTTP errors
 			if (response.status === 401) {
 				throw new Error(
 					"Invalid Ollama API key. Check your API key in the plugin settings."
@@ -110,41 +94,39 @@ IMPORTANT RULES:
 				const data = response.json;
 				if (data.error?.includes("not found")) {
 					throw new Error(
-						`Model '${this.model}' not found. Run 'ollama pull ${this.model}' to download it.`
+						`Model '${this.model}' not found. Check that the model name is correct.`
 					);
 				}
 				throw new Error(
-					`Ollama error (404): ${data.error || "Unknown error"}`
+					`Ollama Cloud error (404): ${data.error || "Unknown error"}`
 				);
 			}
 			if (response.status === 502) {
 				const data = response.json;
 				throw new Error(
-					"Ollama Cloud is unreachable. If using a cloud model (e.g. gemma:4b-cloud), run 'ollama signin' or check your network connectivity. [502: " +
+					"Ollama Cloud is unreachable. Run 'ollama signin' or check your network connectivity. [502: " +
 						(data.error || "TLS timeout") +
 						"]"
 				);
 			}
 			if (response.status === 503) {
 				throw new Error(
-					"Ollama server is busy. Please try again shortly."
+					"Ollama Cloud server is busy. Please try again shortly."
 				);
 			}
 			if (response.status >= 400) {
 				const data = response.json;
 				throw new Error(
-					`Ollama error (${response.status}): ${data.error || "Unknown error"}`
+					`Ollama Cloud error (${response.status}): ${data.error || "Unknown error"}`
 				);
 			}
 
 			const data = response.json;
-			const excerptText = isCloud
-				? (data.message?.content || "").trim()
-				: (data.response || "").trim();
+			const excerptText = (data.message?.content || "").trim();
 
 			if (!excerptText) {
 				throw new Error(
-					"Ollama returned an empty response. The model may not support this prompt format. Try a different model or check the endpoint."
+					"Ollama Cloud returned an empty response. The model may not support this prompt format. Try a different model."
 				);
 			}
 
@@ -154,7 +136,7 @@ IMPORTANT RULES:
 
 			if (error instanceof Error && error.message === "TIMEOUT") {
 				throw new Error(
-					"Ollama request timed out. The model may be too slow or too large for your hardware."
+					"Ollama Cloud request timed out. Please try again."
 				);
 			}
 
@@ -162,7 +144,7 @@ IMPORTANT RULES:
 				throw error;
 			}
 
-			throw new Error(`Ollama error: ${String(error)}`);
+			throw new Error(`Ollama Cloud error: ${String(error)}`);
 		}
 	}
 

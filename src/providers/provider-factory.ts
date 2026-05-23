@@ -1,7 +1,8 @@
 import { AIExcerptProvider, AIExcerptSettings, LLMProvider } from "../types";
 import { ClaudeProvider } from "./claude-provider";
 import { OpenAIProvider } from "./openai-provider";
-import { OllamaProvider } from "./ollama-provider";
+import { OllamaLocalProvider } from "./ollama-local-provider";
+import { OllamaCloudProvider } from "./ollama-cloud-provider";
 
 /**
  * Factory for creating AI providers based on plugin settings
@@ -211,24 +212,44 @@ export class ProviderFactory {
 				});
 				return openaiProvider;
 
-			case LLMProvider.OLLAMA:
+			case LLMProvider.OLLAMA_LOCAL:
 				console.log(
-					`Creating Ollama provider with endpoint: ${settings.ollamaEndpoint}, model: ${settings.ollamaModel}, prompt type: ${settings.promptType}`
+					`Creating Ollama Local provider with endpoint: ${settings.ollamaLocalEndpoint}, model: ${settings.ollamaLocalModel}, prompt type: ${settings.promptType}`
 				);
-				const ollamaProvider = new OllamaProvider(
-					settings.ollamaEndpoint,
-					settings.ollamaModel,
-					settings.promptType,
-					settings.ollamaApiKey
+				const ollamaLocalProvider = new OllamaLocalProvider(
+					settings.ollamaLocalEndpoint,
+					settings.ollamaLocalModel,
+					settings.promptType
 				);
 
-				// Store the provider for reuse
 				this.activeProviders.set(providerId, {
-					provider: ollamaProvider,
+					provider: ollamaLocalProvider,
 					lastUsed: Date.now(),
 					id: providerId,
 				});
-				return ollamaProvider;
+				return ollamaLocalProvider;
+
+			case LLMProvider.OLLAMA_CLOUD:
+				if (!settings.ollamaCloudApiKey) {
+					console.warn("Ollama Cloud API key not provided in settings");
+					return null;
+				}
+
+				console.log(
+					`Creating Ollama Cloud provider with model: ${settings.ollamaCloudModel}, prompt type: ${settings.promptType}`
+				);
+				const ollamaCloudProvider = new OllamaCloudProvider(
+					settings.ollamaCloudModel,
+					settings.promptType,
+					settings.ollamaCloudApiKey
+				);
+
+				this.activeProviders.set(providerId, {
+					provider: ollamaCloudProvider,
+					lastUsed: Date.now(),
+					id: providerId,
+				});
+				return ollamaCloudProvider;
 
 			default:
 				console.error(`Unknown provider: ${settings.provider}`);
@@ -281,8 +302,10 @@ export class ProviderFactory {
 					provider instanceof ClaudeProvider) ||
 				(providerType === LLMProvider.OPENAI &&
 					provider instanceof OpenAIProvider) ||
-				(providerType === LLMProvider.OLLAMA &&
-					provider instanceof OllamaProvider)
+				(providerType === LLMProvider.OLLAMA_LOCAL &&
+					provider instanceof OllamaLocalProvider) ||
+				(providerType === LLMProvider.OLLAMA_CLOUD &&
+					provider instanceof OllamaCloudProvider)
 			) {
 				// Update last used timestamp
 				providerData.lastUsed = Date.now();
@@ -318,7 +341,7 @@ export class ProviderFactory {
 		};
 
 		// Ollama never falls back to cloud providers
-		if (primaryProvider === LLMProvider.OLLAMA) {
+		if (primaryProvider === LLMProvider.OLLAMA_LOCAL || primaryProvider === LLMProvider.OLLAMA_CLOUD) {
 			console.log(
 				"Ollama provider failed — no cloud fallback per privacy policy."
 			);
@@ -426,8 +449,10 @@ export class ProviderFactory {
 					instance instanceof ClaudeProvider) ||
 				(provider === LLMProvider.OPENAI &&
 					instance instanceof OpenAIProvider) ||
-				(provider === LLMProvider.OLLAMA &&
-					instance instanceof OllamaProvider)
+				(provider === LLMProvider.OLLAMA_LOCAL &&
+					instance instanceof OllamaLocalProvider) ||
+				(provider === LLMProvider.OLLAMA_CLOUD &&
+					instance instanceof OllamaCloudProvider)
 			) {
 				this.activeProviders.delete(id);
 				console.log(
