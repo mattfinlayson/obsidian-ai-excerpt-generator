@@ -87,6 +87,7 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 				dropdown
 					.addOption(LLMProvider.CLAUDE, "Claude (Anthropic)")
 					.addOption(LLMProvider.OPENAI, "OpenAI")
+					.addOption(LLMProvider.OLLAMA, "Ollama (Local)")
 					.setValue(this.plugin.settings.provider)
 					.onChange(async (value: string) => {
 						this.plugin.settings.provider = value as LLMProvider;
@@ -160,6 +161,39 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						});
 				});
+		}
+
+		// Ollama Settings - Only show if Ollama is selected
+		if (this.plugin.settings.provider === LLMProvider.OLLAMA) {
+			new Setting(containerEl)
+				.setName("Ollama Endpoint")
+				.setDesc(
+					"Base URL for the Ollama service. Defaults to a standard local installation. Change this for Docker, LAN, or non-default port setups."
+				)
+				.addText((text) =>
+					text
+						.setPlaceholder("http://localhost:11434")
+						.setValue(this.plugin.settings.ollamaEndpoint)
+						.onChange(async (value) => {
+							this.plugin.settings.ollamaEndpoint = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(containerEl)
+				.setName("Ollama Model")
+				.setDesc(
+					"Enter the model name to use (e.g. 'llama3.2', 'mistral:latest'). You must install the model separately via 'ollama pull <model>' before using it here."
+				)
+				.addText((text) =>
+					text
+						.setPlaceholder("e.g. llama3.2")
+						.setValue(this.plugin.settings.ollamaModel)
+						.onChange(async (value) => {
+							this.plugin.settings.ollamaModel = value;
+							await this.plugin.saveSettings();
+						})
+				);
 		}
 
 		// Max Length Slider (moved before prompt type)
