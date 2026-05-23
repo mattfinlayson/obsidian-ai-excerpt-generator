@@ -5,7 +5,7 @@ Generate concise, AI-powered excerpts for your Obsidian notes. This plugin adds 
 ## Features
 
 -   Create excerpts for individual notes or process your entire vault
--   Choose between Claude (Anthropic) or OpenAI as your AI provider
+-   Choose between Claude (Anthropic), OpenAI, or Ollama (local) as your AI provider
 -   Select from six distinct writing styles to match your needs
 -   Customize excerpt length to fit your preferences
 -   Automatic frontmatter creation if needed
@@ -28,7 +28,7 @@ Start by adding your API key in the plugin settings. You can then generate excer
 
 ### AI Provider Settings
 
-Choose your preferred AI provider (Claude or OpenAI), add your API key, and select a model. You can also adjust the maximum excerpt length (between 50-300 characters) to suit your needs.
+Choose your preferred AI provider (Claude, OpenAI, or Ollama), add your API key (for cloud providers) or endpoint/model (for Ollama), and select a model. You can also adjust the maximum excerpt length (between 50-300 characters) to suit your needs.
 
 The models we support include:
 
@@ -90,6 +90,27 @@ We offer six different prompt styles that produce unique results:
 
 [More details in OpenAI's documentation](https://platform.openai.com/docs/quickstart)
 
+### Ollama (Local)
+
+Ollama runs AI models locally on your machine — no API key required, and no content is sent to any cloud service. You must install and manage Ollama separately.
+
+1. Install Ollama from [ollama.com](https://ollama.com)
+2. Start the Ollama service (the desktop app does this automatically, or run `ollama serve` from the terminal)
+3. Pull a model: `ollama pull llama3.2`
+4. In the plugin settings, select **Ollama (Local)** as your AI provider
+5. The default endpoint (`http://localhost:11434`) works for a standard local installation — change it if you use Docker, a different port, or access Ollama on another machine
+6. Enter your model name in the **Model** field (e.g. `llama3.2`, `mistral:latest`)
+
+**Recommended models for excerpt generation:**
+
+-   `llama3.2:3b` — small, fast, good summarization quality
+-   `llama3.2:1b` — tiny, fastest option
+-   `mistral:latest` — good all-rounder
+
+**Privacy:** Ollama is a local provider. When Ollama is selected, generation failures do not fall back to Claude, OpenAI, or any other cloud service — your note content stays on your machine.
+
+[More details in Ollama's documentation](https://github.com/ollama/ollama/blob/main/docs/api.md)
+
 ## Behind the Scenes
 
 ### Smart Batching
@@ -120,6 +141,7 @@ src/
 ├── providers/                # AI provider implementations
 │   ├── claude-provider.ts    # Claude API integration
 │   ├── openai-provider.ts    # OpenAI API integration
+│   ├── ollama-provider.ts    # Ollama local API integration
 │   └── provider-factory.ts   # Factory for creating providers
 ├── prompts/                  # Prompt templates for different styles
 │   ├── excerpt-generation.md # Default prompt template
@@ -153,7 +175,9 @@ Having issues or questions? Feel free to open an issue on GitHub.
 
 ---
 
-**Note**: Using this plugin requires an API key from Anthropic or OpenAI, which may have associated costs. Please check their current pricing before use:
+**Note**: Using this plugin with Claude or OpenAI requires an API key, which may have associated costs. Please check their current pricing before use:
 
 -   [Anthropic Pricing](https://www.anthropic.com/pricing)
 -   [OpenAI Pricing](https://openai.com/pricing)
+
+Ollama runs locally on your machine at no cost — see the Ollama setup section above.
