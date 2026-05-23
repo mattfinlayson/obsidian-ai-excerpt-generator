@@ -88,7 +88,7 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 				dropdown
 					.addOption(LLMProvider.CLAUDE, "Claude (Anthropic)")
 					.addOption(LLMProvider.OPENAI, "OpenAI")
-					.addOption(LLMProvider.OLLAMA, "Ollama (Local)")
+					.addOption(LLMProvider.OLLAMA, "Ollama")
 					.setValue(this.plugin.settings.provider)
 					.onChange(async (value: string) => {
 						this.plugin.settings.provider = value as LLMProvider;
@@ -166,6 +166,21 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 
 		// Ollama Settings - Only show if Ollama is selected
 		if (this.plugin.settings.provider === LLMProvider.OLLAMA) {
+			new Setting(containerEl)
+				.setName("Ollama API Key")
+				.setDesc(
+					"Optional. Only needed when using Ollama.com cloud (https://ollama.com/api). Leave empty for local use."
+				)
+				.addText((text) =>
+					text
+						.setPlaceholder("Only needed for Ollama.com cloud")
+						.setValue(this.plugin.settings.ollamaApiKey)
+						.onChange(async (value) => {
+							this.plugin.settings.ollamaApiKey = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
 			new Setting(containerEl)
 				.setName("Ollama Endpoint")
 				.setDesc(
