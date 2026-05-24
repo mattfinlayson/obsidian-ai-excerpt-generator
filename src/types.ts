@@ -8,15 +8,18 @@ export enum LLMProvider {
 	OLLAMA_CLOUD = "ollama_cloud",
 }
 
-// Define available prompt types
-export enum PromptType {
-	DEFAULT = "excerpt-generation",
-	ACADEMIC = "academic-summary",
-	PROFESSIONAL = "professional-summary",
-	BLOG = "blog-summary",
-	SIMPLIFIED = "simplified-summary",
-	SOCIAL = "social-summary",
-}
+// Define built-in prompt type IDs
+export const BUILTIN_PROMPT_IDS = {
+	DEFAULT: "excerpt-generation",
+	ACADEMIC: "academic-summary",
+	PROFESSIONAL: "professional-summary",
+	BLOG: "blog-summary",
+	SIMPLIFIED: "simplified-summary",
+	SOCIAL: "social-summary",
+} as const;
+
+// Type for prompt type strings (built-in IDs or custom slugs)
+export type PromptTypeId = string;
 
 // Define available models for each provider
 export const CLAUDE_MODELS = [
@@ -48,7 +51,7 @@ export const OPENAI_MODELS = [
 
 export interface AIExcerptSettings {
 	provider: LLMProvider;
-	promptType: PromptType;
+	promptType: string;
 	claudeApiKey: string;
 	claudeModel: string;
 	openaiApiKey: string;

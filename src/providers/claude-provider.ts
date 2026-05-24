@@ -1,7 +1,7 @@
 import "@anthropic-ai/sdk/shims/web";
 import Anthropic from "@anthropic-ai/sdk";
 import { APIError } from "@anthropic-ai/sdk";
-import { AIExcerptProvider, PromptType } from "../types";
+import { AIExcerptProvider } from "../types";
 import { Prompts } from "../utils/prompts";
 
 /**
@@ -14,7 +14,7 @@ export class ClaudeProvider implements AIExcerptProvider {
 	private client: Anthropic;
 	private model: string;
 	private useStreaming: boolean;
-	private promptType: PromptType;
+	private promptType: string;
 	private lastUsage: { input: number; output: number } | null = null;
 	private retryCount: number = 0;
 	private maxRetries: number = 5;
@@ -27,13 +27,13 @@ export class ClaudeProvider implements AIExcerptProvider {
 	 * @param apiKey - The Anthropic API key
 	 * @param model - The Claude model to use (e.g., "claude-3-5-sonnet-20240620")
 	 * @param useStreaming - Whether to use streaming for longer content (default: false)
-	 * @param promptType - The type of prompt to use (default: PromptType.DEFAULT)
+	 * @param promptType - The type of prompt to use (default: "excerpt-generation")
 	 */
 	constructor(
 		apiKey: string,
 		model: string,
 		useStreaming = false,
-		promptType = PromptType.DEFAULT
+		promptType = "excerpt-generation"
 	) {
 		this.client = new Anthropic({
 			apiKey: apiKey,
@@ -189,7 +189,7 @@ export class ClaudeProvider implements AIExcerptProvider {
 		await this._enforceRateLimit();
 
 		// Get the system prompt based on prompt type
-		const systemPrompt = this._getPromptForType();
+		const systemPrompt = await Prompts.getPrompt(this.promptType);
 
 		// Calculate a safe buffer to allow for complete sentences
 		const safeMaxLength = Math.min(
@@ -259,7 +259,7 @@ export class ClaudeProvider implements AIExcerptProvider {
 		await this._enforceRateLimit();
 
 		// Get the system prompt based on prompt type
-		const systemPrompt = this._getPromptForType();
+		const systemPrompt = await Prompts.getPrompt(this.promptType);
 
 		// Calculate a safe buffer to allow for complete sentences
 		const safeMaxLength = Math.min(
@@ -383,28 +383,6 @@ export class ClaudeProvider implements AIExcerptProvider {
 
 		// If all else fails, truncate and add a period to simulate a complete sentence
 		return text.substring(0, maxLength - 1).trim() + ".";
-	}
-
-	/**
-	 * Get the appropriate prompt text based on the prompt type
-	 * @private
-	 */
-	private _getPromptForType(): string {
-		switch (this.promptType) {
-			case PromptType.ACADEMIC:
-				return Prompts.academicSummary;
-			case PromptType.PROFESSIONAL:
-				return Prompts.professionalSummary;
-			case PromptType.BLOG:
-				return Prompts.blogSummary;
-			case PromptType.SIMPLIFIED:
-				return Prompts.simplifiedSummary;
-			case PromptType.SOCIAL:
-				return Prompts.socialSummary;
-			case PromptType.DEFAULT:
-			default:
-				return Prompts.excerptGeneration;
-		}
 	}
 
 	/**

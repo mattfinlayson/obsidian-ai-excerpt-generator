@@ -1,5 +1,5 @@
 import { App, Menu, Notice, Plugin, TFile, TFolder } from "obsidian";
-import { AIExcerptPlugin, AIExcerptSettings, LLMProvider } from "./types";
+import { AIExcerptPlugin, AIExcerptSettings, LLMProvider, BUILTIN_PROMPT_IDS } from "./types";
 import { DEFAULT_SETTINGS, AIExcerptSettingTab } from "./settings";
 import { GenerateAllModal } from "./modals/generate-all-modal";
 import { SelectDirectoryModal } from "./modals/select-directory-modal";
@@ -52,6 +52,13 @@ export default class AIExcerptGenerator
 				new Notice(
 					"Some prompt templates could not be loaded, but the plugin will still function with fallbacks."
 				);
+			}
+
+			// Load custom prompt slugs for the settings dropdown
+			try {
+				await Prompts.loadCustomPrompts();
+			} catch (error) {
+				console.error("Error loading custom prompts:", error);
 			}
 		} catch (error) {
 			console.error("Critical error initializing prompt system:", error);
@@ -247,6 +254,12 @@ export default class AIExcerptGenerator
 				this.settings.ollamaLocalModel = oldModel;
 			}
 
+			await this.saveSettings();
+		}
+
+		// Safety check: ensure promptType is a valid string
+		if (typeof this.settings.promptType !== "string" || !this.settings.promptType) {
+			this.settings.promptType = BUILTIN_PROMPT_IDS.DEFAULT;
 			await this.saveSettings();
 		}
 	}

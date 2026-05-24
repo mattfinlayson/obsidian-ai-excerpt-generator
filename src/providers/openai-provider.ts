@@ -1,7 +1,7 @@
 import "openai/shims/web";
 import OpenAI from "openai";
 import { APIError } from "openai";
-import { AIExcerptProvider, PromptType } from "../types";
+import { AIExcerptProvider } from "../types";
 import { Prompts } from "../utils/prompts";
 
 /**
@@ -14,7 +14,7 @@ export class OpenAIProvider implements AIExcerptProvider {
 	private client: OpenAI;
 	private model: string;
 	private useChatAPI: boolean;
-	private promptType: PromptType;
+	private promptType: string;
 	private lastUsage: { input: number; output: number } | null = null;
 
 	/**
@@ -22,13 +22,13 @@ export class OpenAIProvider implements AIExcerptProvider {
 	 *
 	 * @param apiKey - The OpenAI API key
 	 * @param model - The OpenAI model to use (e.g., "gpt-4o", "gpt-4", "gpt-3.5-turbo")
-	 * @param promptType - The type of prompt to use (default: PromptType.DEFAULT)
+	 * @param promptType - The type of prompt to use (default: "excerpt-generation")
 	 * @param useChatAPI - Whether to use the Chat API instead of the Completions API (default: true)
 	 */
 	constructor(
 		apiKey: string,
 		model: string,
-		promptType = PromptType.DEFAULT,
+		promptType = "excerpt-generation",
 		useChatAPI = true
 	) {
 		this.client = new OpenAI({
@@ -111,7 +111,7 @@ export class OpenAIProvider implements AIExcerptProvider {
 		maxLength: number
 	): Promise<string> {
 		// Get the appropriate prompt based on type
-		const systemPrompt = this._getPromptForType();
+		const systemPrompt = await Prompts.getPrompt(this.promptType);
 
 		// Calculate a safe buffer to allow for complete sentences (20% extra but at least 30 chars)
 		const safeMaxLength = Math.min(
@@ -153,7 +153,7 @@ export class OpenAIProvider implements AIExcerptProvider {
 		maxLength: number
 	): Promise<string> {
 		// Get the appropriate prompt based on type
-		const systemPrompt = this._getPromptForType();
+		const systemPrompt = await Prompts.getPrompt(this.promptType);
 
 		// Calculate a safe buffer to allow for complete sentences (20% extra but at least 30 chars)
 		const safeMaxLength = Math.min(
@@ -272,27 +272,5 @@ export class OpenAIProvider implements AIExcerptProvider {
 
 		// If all else fails, truncate and add a period to simulate a complete sentence
 		return text.substring(0, maxLength - 1).trim() + ".";
-	}
-
-	/**
-	 * Get the appropriate prompt text based on the prompt type
-	 * @private
-	 */
-	private _getPromptForType(): string {
-		switch (this.promptType) {
-			case PromptType.ACADEMIC:
-				return Prompts.academicSummary;
-			case PromptType.PROFESSIONAL:
-				return Prompts.professionalSummary;
-			case PromptType.BLOG:
-				return Prompts.blogSummary;
-			case PromptType.SIMPLIFIED:
-				return Prompts.simplifiedSummary;
-			case PromptType.SOCIAL:
-				return Prompts.socialSummary;
-			case PromptType.DEFAULT:
-			default:
-				return Prompts.excerptGeneration;
-		}
 	}
 }

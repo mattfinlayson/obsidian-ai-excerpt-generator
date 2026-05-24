@@ -1,16 +1,16 @@
 import { requestUrl } from "obsidian";
-import { AIExcerptProvider, PromptType } from "../types";
+import { AIExcerptProvider } from "../types";
 import { Prompts } from "../utils/prompts";
 
 export class OllamaLocalProvider implements AIExcerptProvider {
 	private endpoint: string;
 	private model: string;
-	private promptType: PromptType;
+	private promptType: string;
 
 	constructor(
 		endpoint: string,
 		model: string,
-		promptType = PromptType.DEFAULT
+		promptType = "excerpt-generation"
 	) {
 		this.endpoint = endpoint;
 		this.model = model;
@@ -23,7 +23,7 @@ export class OllamaLocalProvider implements AIExcerptProvider {
 			10
 		);
 
-		const systemPrompt = this._getPromptForType();
+		const systemPrompt = await Prompts.getPrompt(this.promptType);
 		const enhancedSystemPrompt = `${systemPrompt}
 
 Generate a concise excerpt (maximum ${maxLength} characters) that captures the essence of this document.
@@ -174,23 +174,5 @@ IMPORTANT RULES:
 		}
 
 		return text.substring(0, maxLength - 1).trim() + ".";
-	}
-
-	private _getPromptForType(): string {
-		switch (this.promptType) {
-			case PromptType.ACADEMIC:
-				return Prompts.academicSummary;
-			case PromptType.PROFESSIONAL:
-				return Prompts.professionalSummary;
-			case PromptType.BLOG:
-				return Prompts.blogSummary;
-			case PromptType.SIMPLIFIED:
-				return Prompts.simplifiedSummary;
-			case PromptType.SOCIAL:
-				return Prompts.socialSummary;
-			case PromptType.DEFAULT:
-			default:
-				return Prompts.excerptGeneration;
-		}
 	}
 }
