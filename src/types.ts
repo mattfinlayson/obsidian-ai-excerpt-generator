@@ -64,6 +64,7 @@ export interface AIExcerptSettings {
 }
 
 export interface AIExcerptProvider {
+	readonly providerType: LLMProvider;
 	generateExcerpt(content: string, maxLength: number): Promise<string>;
 }
 

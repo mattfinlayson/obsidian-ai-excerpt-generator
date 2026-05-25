@@ -51,111 +51,50 @@ export class PromptLoader {
 
 		const cacheKey = filename;
 
-		// Return from cache if available
 		if (this.cache[cacheKey]) {
 			return this.cache[cacheKey];
 		}
 
-		let content: string | null = null;
+		const basePath = this.getPluginBasePath();
+		if (!basePath) {
+			throw new Error("Could not determine plugin base path");
+		}
 
-		try {
-			// Get the plugin instance
-			const plugins = (this.app as any).plugins;
-			const plugin = plugins.getPlugin(this.pluginId);
+		const possiblePaths = [
+			path.join(basePath, `prompts/${filename}.md`),
+			`prompts/${filename}.md`,
+		];
 
+		if ((this.app as any).plugins) {
+			const plugin = (this.app as any).plugins.getPlugin(this.pluginId);
 			if (plugin) {
-				const pluginPromptPath = `prompts/${filename}.md`;
-
-				try {
-					// Attempt multiple strategies to find the prompt file
-					const possiblePaths = [];
-
-					// Strategy 1: Using plugin.path if available
-					if (plugin.path) {
-						possiblePaths.push(
-							path.join(plugin.path, pluginPromptPath)
-						);
-					}
-
-					// Strategy 2: Using manifest.dir if available
-					if (plugin.manifest && plugin.manifest.dir) {
-						possiblePaths.push(
-							path.join(plugin.manifest.dir, pluginPromptPath)
-						);
-					}
-
-					// Strategy 3: Direct path in plugin directory
-					possiblePaths.push(pluginPromptPath);
-
-					// Strategy 4: Using baseDir from plugin settings if available
-					if ((plugin as any).baseDir) {
-						possiblePaths.push(
-							path.join((plugin as any).baseDir, pluginPromptPath)
-						);
-					}
-
-					// Try each path until we find one that works
-					for (const pathToTry of possiblePaths) {
-						if (await this.app.vault.adapter.exists(pathToTry)) {
-							content = await this.app.vault.adapter.read(
-								pathToTry
-							);
-							console.log(
-								`Loaded prompt from path: ${pathToTry}`
-							);
-							break;
-						}
-					}
-
-					// If still no content, look directly in plugin's bundled files
-					if (!content && plugin.manifest) {
-						const resourcePath = `.obsidian/plugins/${this.pluginId}/${pluginPromptPath}`;
-						if (await this.app.vault.adapter.exists(resourcePath)) {
-							content = await this.app.vault.adapter.read(
-								resourcePath
-							);
-							console.log(
-								`Loaded prompt from plugin resources: ${resourcePath}`
-							);
-						}
-					}
-
-					if (!content) {
-						console.warn(
-							`Could not find prompt file: ${filename} in any location`
-						);
-					}
-				} catch (pluginError) {
-					console.error(
-						`Error loading from plugin directory: ${pluginError}`
-					);
+				if (plugin.path) {
+					possiblePaths.unshift(path.join(plugin.path, `prompts/${filename}.md`));
 				}
-			} else {
-				console.error(`Plugin not found: ${this.pluginId}`);
+				if (plugin.manifest && plugin.manifest.dir) {
+					possiblePaths.unshift(path.join(plugin.manifest.dir, `prompts/${filename}.md`));
+				}
 			}
+		}
 
-			// If content was loaded, process and cache it
-			if (content) {
+		for (const pathToTry of possiblePaths) {
+			if (await this.app.vault.adapter.exists(pathToTry)) {
+				const content = await this.app.vault.adapter.read(pathToTry);
 				const promptContent = this.processMarkdown(content);
 				this.cache[cacheKey] = promptContent;
 				return promptContent;
 			}
-
-			// Provide a basic default prompt if the file can't be loaded
-			if (filename === "excerpt-generation") {
-				const defaultPrompt =
-					"Generate a concise summary of the following text in less than 200 words, focusing on the key points and main ideas.";
-				console.warn("Using hardcoded default prompt as fallback");
-				this.cache[cacheKey] = defaultPrompt;
-				return defaultPrompt;
-			}
-
-			// If we couldn't load the content, throw an error
-			throw new Error(`Failed to load prompt template: ${filename}`);
-		} catch (error) {
-			console.error(`Failed to load prompt template: ${filename}`, error);
-			throw error;
 		}
+
+		if (filename === "excerpt-generation") {
+			const defaultPrompt =
+				"Generate a concise summary of the following text in less than 200 words, focusing on the key points and main ideas.";
+			console.warn("Using hardcoded default prompt as fallback");
+			this.cache[cacheKey] = defaultPrompt;
+			return defaultPrompt;
+		}
+
+		throw new Error(`Failed to load prompt template: ${filename}`);
 	}
 
 	/**

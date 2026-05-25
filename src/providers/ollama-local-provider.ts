@@ -1,8 +1,18 @@
 import { requestUrl } from "obsidian";
-import { AIExcerptProvider } from "../types";
+import { AIExcerptProvider, LLMProvider } from "../types";
 import { Prompts } from "../utils/prompts";
+import { buildEnhancedSystemPrompt, ensureCompleteSentence } from "../utils/excerpt-utils";
+
+function getOllamaTimeout(): number {
+	const raw = parseInt(
+		localStorage.getItem("ai-excerpt-ollama-timeout") || "300000",
+		10
+	);
+	return Math.min(Math.max(raw || 300000, 1000), 600000);
+}
 
 export class OllamaLocalProvider implements AIExcerptProvider {
+	readonly providerType = LLMProvider.OLLAMA_LOCAL;
 	private endpoint: string;
 	private model: string;
 	private promptType: string;
@@ -18,23 +28,10 @@ export class OllamaLocalProvider implements AIExcerptProvider {
 	}
 
 	async generateExcerpt(content: string, maxLength: number): Promise<string> {
-		const timeoutMs = parseInt(
-			localStorage.getItem("ai-excerpt-ollama-timeout") || "300000",
-			10
-		);
+		const timeoutMs = getOllamaTimeout();
 
 		const systemPrompt = await Prompts.getPrompt(this.promptType);
-		const enhancedSystemPrompt = `${systemPrompt}
-
-Generate a concise excerpt (maximum ${maxLength} characters) that captures the essence of this document.
-
-IMPORTANT RULES:
-- Your entire response must be under ${maxLength} characters
-- Always end with a complete sentence - NEVER end mid-sentence or with a truncated word
-- Do not use ellipses (...) in your response
-- Match the author's writing style and voice
-- If approaching the character limit, find a natural ending point for a complete thought
-- Count your characters carefully to ensure you don't exceed the limit`;
+		const enhancedSystemPrompt = buildEnhancedSystemPrompt(systemPrompt, maxLength);
 
 		const requestBody = JSON.stringify({
 			model: this.model,
@@ -102,7 +99,7 @@ IMPORTANT RULES:
 				);
 			}
 
-			return this._ensureCompleteSentence(excerptText, maxLength);
+			return ensureCompleteSentence(excerptText, maxLength);
 		} catch (error) {
 			if (timer) clearTimeout(timer);
 
@@ -118,61 +115,5 @@ IMPORTANT RULES:
 
 			throw new Error(`Ollama error: ${String(error)}`);
 		}
-	}
-
-	private _ensureCompleteSentence(
-		text: string,
-		maxLength: number
-	): string {
-		if (text.length <= maxLength) {
-			return text;
-		}
-
-		const sentenceEndRegex = /[.!?]\s*(?=[A-Z]|$)/g;
-		let lastMatchIndex = -1;
-
-		try {
-			const matches = [...text.matchAll(sentenceEndRegex)];
-
-			for (const match of matches) {
-				if (match.index !== undefined) {
-					const position = match.index + match[0].length;
-					if (position <= maxLength) {
-						lastMatchIndex = position;
-					} else {
-						break;
-					}
-				}
-			}
-		} catch (error) {
-			console.warn("Error matching sentence boundaries:", error);
-		}
-
-		if (lastMatchIndex > 0) {
-			return text.substring(0, lastMatchIndex).trim();
-		}
-
-		const lastPeriodIndex = text.lastIndexOf(".", maxLength - 1);
-		const lastQuestionIndex = text.lastIndexOf("?", maxLength - 1);
-		const lastExclamationIndex = text.lastIndexOf("!", maxLength - 1);
-
-		const endIndex = Math.max(
-			lastPeriodIndex > 0 ? lastPeriodIndex : 0,
-			lastQuestionIndex > 0 ? lastQuestionIndex : 0,
-			lastExclamationIndex > 0 ? lastExclamationIndex : 0
-		);
-
-		if (endIndex > 0) {
-			return text.substring(0, endIndex + 1).trim();
-		}
-
-		if (text.length > maxLength) {
-			const lastSpaceIndex = text.lastIndexOf(" ", maxLength - 1);
-			if (lastSpaceIndex > maxLength * 0.75) {
-				return text.substring(0, lastSpaceIndex).trim() + ".";
-			}
-		}
-
-		return text.substring(0, maxLength - 1).trim() + ".";
 	}
 }

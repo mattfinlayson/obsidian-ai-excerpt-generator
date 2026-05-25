@@ -109,15 +109,16 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName("Claude API Key")
 				.setDesc("Your Anthropic API key for Claude")
-				.addText((text) =>
+				.addText((text) => {
 					text
 						.setPlaceholder("Enter your API key")
 						.setValue(this.plugin.settings.claudeApiKey)
 						.onChange(async (value) => {
 							this.plugin.settings.claudeApiKey = value;
 							await this.plugin.saveSettings();
-						})
-				);
+						});
+					text.inputEl.type = "password";
+				});
 
 			new Setting(containerEl)
 				.setName("Claude Model")
@@ -142,15 +143,16 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName("OpenAI API Key")
 				.setDesc("Your OpenAI API key")
-				.addText((text) =>
+				.addText((text) => {
 					text
 						.setPlaceholder("Enter your API key")
 						.setValue(this.plugin.settings.openaiApiKey)
 						.onChange(async (value) => {
 							this.plugin.settings.openaiApiKey = value;
 							await this.plugin.saveSettings();
-						})
-				);
+						});
+					text.inputEl.type = "password";
+				});
 
 			new Setting(containerEl)
 				.setName("OpenAI Model")
@@ -209,15 +211,16 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 				.setDesc(
 					"Your API key for Ollama Cloud (https://ollama.com). Required for cloud access."
 				)
-				.addText((text) =>
+				.addText((text) => {
 					text
 						.setPlaceholder("Enter your API key")
 						.setValue(this.plugin.settings.ollamaCloudApiKey)
 						.onChange(async (value) => {
 							this.plugin.settings.ollamaCloudApiKey = value;
 							await this.plugin.saveSettings();
-						})
-				);
+						});
+					text.inputEl.type = "password";
+				});
 
 			new Setting(containerEl)
 				.setName("Ollama Cloud Model")
@@ -375,19 +378,20 @@ export class AIExcerptSettingTab extends PluginSettingTab {
 									? `This prompt is currently in use. Delete "${displayName}" and switch to Default prompt?`
 									: `Delete custom prompt "${displayName}"? This cannot be undone.`;
 
-								if (window.confirm(message)) {
-									PromptLoader.deleteCustomPrompt(slug)
-										.then(() => {
-											Prompts.invalidateCustomPrompt(slug);
-											if (isActive) {
-												this.plugin.settings.promptType =
-													BUILTIN_PROMPT_IDS.DEFAULT;
-											}
-											this.plugin.saveSettings().then(() => {
-												this.display();
-												new Notice(`Deleted custom prompt "${displayName}"`);
-											});
-										})
+							if (window.confirm(message)) {
+								PromptLoader.deleteCustomPrompt(slug)
+									.then(() => {
+										PromptLoader.removeFromCustomPromptRegistry(slug);
+										Prompts.invalidateCustomPrompt(slug);
+										if (isActive) {
+											this.plugin.settings.promptType =
+												BUILTIN_PROMPT_IDS.DEFAULT;
+										}
+										this.plugin.saveSettings().then(() => {
+											this.display();
+											new Notice(`Deleted custom prompt "${displayName}"`);
+										});
+									})
 										.catch((e) => {
 											new Notice(`Failed to delete prompt: ${e.message}`);
 										});

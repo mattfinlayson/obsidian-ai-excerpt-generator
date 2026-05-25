@@ -212,8 +212,12 @@ export class ProviderFactory {
 				});
 				return openaiProvider;
 
-			case LLMProvider.OLLAMA_LOCAL:
-				console.log(
+		case LLMProvider.OLLAMA_LOCAL:
+			if (!settings.ollamaLocalModel) {
+				console.warn("Ollama Local model not specified in settings");
+				return null;
+			}
+			console.log(
 					`Creating Ollama Local provider with endpoint: ${settings.ollamaLocalEndpoint}, model: ${settings.ollamaLocalModel}, prompt type: ${settings.promptType}`
 				);
 				const ollamaLocalProvider = new OllamaLocalProvider(
@@ -296,20 +300,9 @@ export class ProviderFactory {
 		}
 
 		for (const [id, providerData] of this.activeProviders.entries()) {
-			const provider = providerData.provider;
-			if (
-				(providerType === LLMProvider.CLAUDE &&
-					provider instanceof ClaudeProvider) ||
-				(providerType === LLMProvider.OPENAI &&
-					provider instanceof OpenAIProvider) ||
-				(providerType === LLMProvider.OLLAMA_LOCAL &&
-					provider instanceof OllamaLocalProvider) ||
-				(providerType === LLMProvider.OLLAMA_CLOUD &&
-					provider instanceof OllamaCloudProvider)
-			) {
-				// Update last used timestamp
+			if (providerData.provider.providerType === providerType) {
 				providerData.lastUsed = Date.now();
-				return provider;
+				return providerData.provider;
 			}
 		}
 		return null;
@@ -438,22 +431,10 @@ export class ProviderFactory {
 	 * @param provider - The provider type that failed
 	 */
 	static reportProviderFailure(provider: LLMProvider): void {
-		// Put the provider in cooldown after failure
 		this.setProviderCooldown(provider);
 
-		// Remove all active instances of this provider type so they aren't reused
 		for (const [id, providerData] of this.activeProviders.entries()) {
-			const instance = providerData.provider;
-			if (
-				(provider === LLMProvider.CLAUDE &&
-					instance instanceof ClaudeProvider) ||
-				(provider === LLMProvider.OPENAI &&
-					instance instanceof OpenAIProvider) ||
-				(provider === LLMProvider.OLLAMA_LOCAL &&
-					instance instanceof OllamaLocalProvider) ||
-				(provider === LLMProvider.OLLAMA_CLOUD &&
-					instance instanceof OllamaCloudProvider)
-			) {
+			if (providerData.provider.providerType === provider) {
 				this.activeProviders.delete(id);
 				console.log(
 					`Removed active ${provider} instance ${id} after failure`

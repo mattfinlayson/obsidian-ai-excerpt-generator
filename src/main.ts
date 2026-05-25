@@ -254,6 +254,10 @@ export default class AIExcerptGenerator
 				this.settings.ollamaLocalModel = oldModel;
 			}
 
+			delete (this.settings as any).ollamaEndpoint;
+			delete (this.settings as any).ollamaApiKey;
+			delete (this.settings as any).ollamaModel;
+
 			await this.saveSettings();
 		}
 
@@ -270,10 +274,10 @@ export default class AIExcerptGenerator
 	async saveSettings() {
 		await this.saveData(this.settings);
 
-		// Reload prompt templates
 		await Prompts.reload();
 
-		// Re-initialize the file processor with new settings
+		ProviderFactory.shutdown();
+
 		this.fileProcessor = new FileProcessor(
 			this.app.vault,
 			this.app.fileManager,

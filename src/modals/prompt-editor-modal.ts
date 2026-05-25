@@ -248,6 +248,7 @@ export class PromptEditorModal extends Modal {
 
 			await PromptLoader.ensureCustomPromptsDir();
 			await PromptLoader.saveCustomPrompt(slug, fileContent);
+			PromptLoader.addToCustomPromptRegistry(slug);
 			Prompts.invalidateCustomPrompt(slug);
 			Prompts.addCustomPromptSlug(slug);
 
